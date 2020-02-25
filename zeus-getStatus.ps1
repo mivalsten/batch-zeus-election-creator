@@ -1,7 +1,3 @@
-<#
-#requires -Module Microsoft.PowerShell.GraphicalTools
-#>
-
 $commonParams = @{
     #"Proxy" = ""
     #"ProxyUseDefaultCredential" = $true
@@ -31,12 +27,19 @@ $r = Invoke-WebRequest -uri "$base/auth/auth/login" -WebSession $session -method
     "Referer" = "$base/auth/auth/login"
     "Origin"  = $base
 }
-$in = $(import-csv (Get-ChildItem "$root\out" -Filter "*-output.csv" | Select-Object name, fullname | Sort-Object -Property name -Descending | Out-GridView -PassThru).fullname -delimiter ',' -encoding "UTF8")
-foreach ($e in $($in.election | Select-Object -unique)) {
-    $r = Invoke-WebRequest -uri "$base/elections/$e/close" -WebSession $session -method POST -Body @{
-        "csrfmiddlewaretoken" = $csrfRegex.matches(($r.Content -split "`n" | select-string "csrfmiddlewaretoken")[0]).captures.groups[1].value
-    } -Headers @{
-        "Referer" = "$base/elections/$e"
+$in = $(import-csv (Get-ChildItem "$root\out" -Filter "*.csv" | Select-Object name, fullname | Sort-Object -Property name -Descending | Out-GridView -PassThru).fullname -delimiter ',' -encoding "UTF8")
+foreach ($e in $in) {
+    $r = Invoke-WebRequest -uri "$base/elections/$($e.election)/polls/" -WebSession $session -method GET -Headers @{
+        "Referer" = "$base/elections/$($e.election)"
         "Origin"  = $base
+    }
+    $r.content -match "(?ms)<tbody.*</tbody>" | Out-Null
+    $t = $matches[0]
+    $t = $t -replace "`r" -replace "`n" -replace " " -replace "</td><td>", ";" -replace "<div.*?div>" -replace "<td>", "#!#!" -replace "<.*?>" -split "#!#!"
+    $t | ForEach-Object {
+        if ($_ -ne "") {
+            $a = $_ -split ';'
+            write-output "$($e.name) - uprawnione $($a[3]), zagłosowało $($a[5]), frekwencja $([math]::Round($($a[5])/$($a[3])*100,1))%"
+        }
     }
 }

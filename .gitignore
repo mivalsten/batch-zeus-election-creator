@@ -1,3 +1,5 @@
-temp
-out
+temp/*
+out/*
 *.cred
+zeus-input.csv
+panel-elections

@@ -1,4 +1,4 @@
-#requires -Module Microsoft.PowerShell.GraphicalTools
+#Import-module Microsoft.PowerShell.GraphicalTools
 
 $commonParams = @{
     #"Proxy" = ""
@@ -7,8 +7,9 @@ $commonParams = @{
 
 $base = "https://zeus.int.partiarazem.pl"
 $root = $PSScriptRoot
+$csrfRegex = [regex]::New(".*value=`"(.*)`"")
 
-try { $credentials = import-clixml $root/zeus.cred }
+try { $credentials = import-clixml "$root\$($base -replace "https://").cred" }
 catch {
     $credentials = get-credential -Message "Zeus login"
     if ($Host.UI.PromptForChoice("Security", "Do you want to save credentials?", @("No", "Yes"), 0)) {
@@ -23,12 +24,13 @@ $r = Invoke-WebRequest -uri "$base/auth/auth/login" -SessionVariable "session" @
 $r = Invoke-WebRequest -uri "$base/auth/auth/login" -WebSession $session -method POST -Body @{
     "username"            = $credentials.UserName
     "password"            = $credentials.GetNetworkCredential().password
-    "csrfmiddlewaretoken" = ($r.InputFields | Where-Object name -eq csrfmiddlewaretoken)[0].value
+    "csrfmiddlewaretoken" = $csrfRegex.matches(($r.Content -split "`n" | select-string "csrfmiddlewaretoken")[0]).captures.groups[1].value
 } -Headers @{
     "Referer" = "$base/auth/auth/login"
     "Origin"  = $base
 }
 $in = $(import-csv (Get-ChildItem "$root\out" -Filter "*-output.csv" | Select-Object name, fullname | Sort-Object -Property name -Descending | Out-GridView -PassThru).fullname -delimiter ',' -encoding "UTF8")
+
 foreach ($e in $in) {
     $r = Invoke-WebRequest -uri "$base/elections/$($e.election)/freeze" -WebSession $session -method POST -Body @{
         "csrfmiddlewaretoken" = ($r.InputFields | Where-Object name -eq csrfmiddlewaretoken)[0].value
@@ -38,19 +40,20 @@ foreach ($e in $in) {
     }
 }
 
-foreach ($e in $input) {
-    $r = Invoke-WebRequest -uri "$base/elections/$($e.election)/email-voters" -WebSession $session -method POST -Body @{
-        "csrfmiddlewaretoken" = ($r.InputFields | Where-Object name -eq csrfmiddlewaretoken)[0].value
+
+foreach ($e in $in) {
+    $r = Invoke-WebRequest -uri "$base/elections/$($e.election)/polls/$($e.poll)/voters/email" -WebSession $session -method POST -Body @{
+        "csrfmiddlewaretoken" = $csrfRegex.matches(($r.Content -split "`n" | select-string "csrfmiddlewaretoken")[0]).captures.groups[1].value
         "template"            = "vote"
         "voter_id"            = ""
         "email_subject"       = $e.name
-        "email_body"          = ""  
+        "email_body"          = "W przypadku problemów z logowaniem otwórz link do głosowania w trybie incognito. W tym celu kliknij w link prawym przyciskiem myszy i wybierz `"Otwórz w trybie incognito`" lub podobnie brzmiącą opcję. W razie problemów, skontaktuj się ze swoim Zarządem Okręgu."
         "send_to"             = "all"
         "sms_body"            = ""
         "contact_method"      = "email"
         "notify_once"         = "False"
     } -Headers @{
-        "Referer" = "$base/elections/$($e.election)/email-voters"
+        "Referer" = "$base/elections/$($e.election)/polls/$($e.poll)/voters/email"
         "Origin"  = $base
     }
 }
