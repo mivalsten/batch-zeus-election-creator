@@ -33,7 +33,7 @@ $in = $(import-csv (Get-ChildItem "$root\out" -Filter "*-output.csv" | Select-Ob
 
 foreach ($e in $in) {
     $r = Invoke-WebRequest -uri "$base/elections/$($e.election)/freeze" -WebSession $session -method POST -Body @{
-        "csrfmiddlewaretoken" = ($r.InputFields | Where-Object name -eq csrfmiddlewaretoken)[0].value
+        "csrfmiddlewaretoken" = $csrfRegex.matches(($r.Content -split "`n" | select-string "csrfmiddlewaretoken")[0]).captures.groups[1].value
     } -Headers @{
         "Referer" = "$base/elections/$($e.election)"
         "Origin"  = $base
