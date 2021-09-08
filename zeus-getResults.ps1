@@ -49,7 +49,7 @@ foreach ($e in $in) {
         if ($_ -eq "Runda 1") {$end = $true}
         if ($start -and -not $end -and $_ -ne "") {write-output "- $_"}
         if ($_ -eq "Wybrano,Grupy") {$start = $true}
-        if ($_ -match "Głosujący,(\d{1,})") {$upr = $matches[1]}
+        if ($_ -match "Osoby głosujące,(\d{1,})") {$upr = $matches[1] / ($in | Where-Object {$_.name -eq $e.name}).count}
         if ($karty) {$glos++}
         if ($_ -eq "Karty do głosowania") {$karty = $true}
     }

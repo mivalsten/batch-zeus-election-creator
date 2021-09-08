@@ -290,6 +290,7 @@ foreach ($election in ($elections.Election | select-object -unique)) {
             "pollName" = $e.poll
             "election" = $electionID
             "poll"     = $pollID
+            "electionID" = $e.ID
         }
     }
 }
