@@ -119,7 +119,7 @@ Ilość mandatów: $($e.seats)
 Maksymalna legalna liczba mandatów: $maxLegalMandates
 "@
         }
-            $e.seats = read-host "podaj nową ilość mandatów (0 by anulować wybory): "
+        $e.seats = read-host "podaj nową ilość mandatów (0 by anulować wybory): "
 
         if ($e.seats -eq 0) {
             #dowolny warunek niespełniony, odrzucamy wybory
@@ -267,32 +267,78 @@ foreach ($election in ($elections.Election | select-object -unique)) {
 
         #add voters
 
-            $r = Invoke-WebRequest -uri "$base/elections/$electionID/polls/$pollID/voters/upload" @commonParams -WebSession $session -method POST -Form @{
-                "csrfmiddlewaretoken" = $csrfRegex.matches(($r.Content -split "`n" | select-string "csrfmiddlewaretoken")[0]).captures.groups[1].value
-                "csrf_token"          = $csrfRegex.matches(($r.Content -split "`n" | select-string "csrfmiddlewaretoken")[0]).captures.groups[1].value
-                "voters_file"         = Get-Item -Path $votersPath #$root/aaa.txt
-                "encoding"            = "utf-8"
-            } -Headers @{
-                "Referer" = "$base/elections/$electionID/polls/$pollID/voters/upload"
-                "Origin"  = $base
-            } -ContentType "multipart/form-data; charset=utf-8"
+        $r = Invoke-WebRequest -uri "$base/elections/$electionID/polls/$pollID/voters/upload" @commonParams -WebSession $session -method POST -Form @{
+            "csrfmiddlewaretoken" = $csrfRegex.matches(($r.Content -split "`n" | select-string "csrfmiddlewaretoken")[0]).captures.groups[1].value
+            "csrf_token"          = $csrfRegex.matches(($r.Content -split "`n" | select-string "csrfmiddlewaretoken")[0]).captures.groups[1].value
+            "voters_file"         = Get-Item -Path $votersPath #$root/aaa.txt
+            "encoding"            = "utf-8"
+        } -Headers @{
+            "Referer" = "$base/elections/$electionID/polls/$pollID/voters/upload"
+            "Origin"  = $base
+        } -ContentType "multipart/form-data; charset=utf-8"
 
-            $r = Invoke-WebRequest -uri "$base/elections/$electionID/polls/$pollID/voters/upload" @commonParams -WebSession $session -method POST -Body @{
-                "csrfmiddlewaretoken" = $csrfRegex.matches(($r.Content -split "`n" | select-string "csrfmiddlewaretoken")[0]).captures.groups[1].value
-                "confirm_p"           = 1
-                "encoding"            = "utf-8"
-            } -Headers @{
-                "Referer" = "$base/elections/$electionID/polls/$pollID/voters/upload"
-                "Origin"  = $base
-            } -ContentType "application/x-www-form-urlencoded; charset=utf-8"
+        $r = Invoke-WebRequest -uri "$base/elections/$electionID/polls/$pollID/voters/upload" @commonParams -WebSession $session -method POST -Body @{
+            "csrfmiddlewaretoken" = $csrfRegex.matches(($r.Content -split "`n" | select-string "csrfmiddlewaretoken")[0]).captures.groups[1].value
+            "confirm_p"           = 1
+            "encoding"            = "utf-8"
+        } -Headers @{
+            "Referer" = "$base/elections/$electionID/polls/$pollID/voters/upload"
+            "Origin"  = $base
+        } -ContentType "application/x-www-form-urlencoded; charset=utf-8"
         $output += [PSCustomObject]@{
-            "name"     = $e.Election
-            "pollName" = $e.poll
-            "election" = $electionID
-            "poll"     = $pollID
-            "electionID" = $e.ID
+            "name"       = $e.Election
+            "pollName"   = $e.poll
+            "election"   = $electionID
+            "poll"       = $pollID
         }
     }
 }
 $output | export-csv -Path "$root\out\$(get-date -format "yyyyMMddTHHmmss")-output.csv" -NoTypeInformation -Encoding utf8NoBOM -Delimiter ','
+#>
+
+########## end election form in panel ####################
+<#
+try { $credentials = import-clixml "$root\panel.partiarazem.pl.cred" }
+catch {
+    $credentials = get-credential -Message "Panel login"
+    if ($Host.UI.PromptForChoice("Security", "Do you want to save credentials?", @("No", "Yes"), 0)) {
+        $credentials | Export-Clixml "$root\panel.partiarazem.pl.cred"
+    }
+}
+
+$s = Invoke-WebRequest -uri "https://panel.partiarazem.pl" -method GET -SessionVariable "rse" @commonParams -headers @{
+    "Referer" = "https://panel.partiarazem.pl/members/sign_in"
+    "Origin"  = "https://panel.partiarazem.pl"
+}
+$s.Content -match "`n.*csrf-token""\ content=""(?'token'.*)"".*`n" | Out-Null
+$authToken = $matches.token
+$s = Invoke-WebRequest -uri "https://panel.partiarazem.pl/members/sign_in" -method POST -websession $rse @commonParams -headers @{
+    "Referer" = "https://panel.partiarazem.pl/members/sign_in"
+    "Origin"  = "https://panel.partiarazem.pl"
+} -body @{
+    "utf8"               = "✓"
+    "authenticity_token" = $authToken
+    "member[email]"      = $credentials.UserName
+    "member[password]"   = $credentials.GetNetworkCredential().Password
+    "commit"             = "Zaloguj się"
+}
+
+$s.Content -match "`n.*csrf-token""\ content=""(?'token'.*)"".*`n" | Out-Null
+$authToken = $matches.token
+
+foreach ($e in $(import-csv "$root/zeus-input.csv" -delimiter ',' -encoding "UTF8")) {
+    Write-Output "closing " + $e.Election
+    $s = Invoke-WebRequest -uri "https://panel.partiarazem.pl/elections/$($e.ID)" -method PUT -websession $rse @commonParams -headers @{
+        "Referer" = "https://panel.partiarazem.pl/elections"
+        "Origin"  = "https://panel.partiarazem.pl"
+    } -body @{
+        "utf8"                       = "✓"
+        "authenticity_token"         = $authToken
+        "election[active]"           = "0"
+        "election[answers_editable]" = "0"
+        "commit"                     = "Zapisz wybory"
+    }
+    $s.Content -match "`n.*csrf-token""\ content=""(?'token'.*)"".*`n" | Out-Null
+    $authToken = $matches.token
+}
 #>
