@@ -23,7 +23,7 @@ param (
         ValueFromPipeline = $false)
     ]$personToRemove
 )
-Import-Module Microsoft.PowerShell.ConsoleGuiTools
+Import-Module Microsoft.PowerShell.GuiTools
 $OutputEncoding = [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding
 
 $filepath = Split-Path $file

@@ -29,7 +29,7 @@ $r = Invoke-WebRequest -uri "$base/auth/auth/login" -WebSession $session -method
     "Referer" = "$base/auth/auth/login"
     "Origin"  = $base
 }
-if ($isLinux) {
+if ($isWindows) {
     $in = $(import-csv (Get-ChildItem "$root\out" -Filter "*-output.csv" | Select-Object name, fullname | Sort-Object -Property name -Descending | Out-GridView -PassThru).fullname -delimiter ',' -encoding "UTF8")
 } else {
     $in = $(import-csv (Get-ChildItem "$root/out" -Filter "*-output.csv" | Select-Object name, fullname | Sort-Object -Property name -Descending | Out-ConsoleGridView).fullname -delimiter ',' -encoding "UTF8")

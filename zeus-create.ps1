@@ -94,10 +94,12 @@ foreach ($e in $elections) {
     $can = @()
     if ($e.m -eq "") { $m = @() } else { $m = $($e.M -split ';') }
     if ($e.k -eq "") { $k = @() } else { $k = $($e.K -split ';') }
+    if ($e.x -eq "") { $x = @() } else { $x = $($e.X -split ';') }
     $can += $m
     $can += $k
+    $can += $x
     $s = [math]::floor(($e.seats / 2))
-    $maxLegalMandates = $([Math]::Min($([Math]::Min($m.count, $k.count) * 2 + 1 ), $can.count))
+    $maxLegalMandates = $([Math]::Min($([Math]::Min($m.count, $k.count) * 2 + 1 ) + $x.count, $can.count))
 
     $quotaM = $($m.count -ge $s)
     $quotaK = $($k.count -ge $s)
@@ -110,56 +112,51 @@ foreach ($e in $elections) {
         $electionName = $e.Election
     }
     if (-not ($quotaM -and $quotaK -and $quotaA)) {
-        if ($maxLegalMandates -gt 0) {
+        
+            write-output "Kandydatury kobiece: $($k.count)"
+            write-output "Kandydatury męskie: $($m.count)"
+            write-output "Kandydatury nb: $($x.count)"
+            write-output "Liczba mandatów: $($e.seats)"
+            write-output "Maksymalna legalna liczba mandatów: $maxLegalMandates"
 
-            write-output @"
-Kandydatury kobiece: $($k.count)
-Kandydatury męskie: $($m.count)
-Ilość mandatów: $($e.seats)
-Maksymalna legalna liczba mandatów: $maxLegalMandates
-"@
-        }
+        $e | Add-Member -NotePropertyValue $e.seats -NotePropertyName "seatsOld"
         $e.seats = read-host "podaj nową ilość mandatów (0 by anulować wybory): "
 
         if ($e.seats -eq 0) {
             #dowolny warunek niespełniony, odrzucamy wybory
             $no++
-            Write-Output @"
-`n`n**$(get-date -Format "U-\K\KW-yyyy-MM-dd")-$no**
-$electionName nie odbędą się ze względu na niedostateczną liczbę kandydatur.
 
-Odwołania można składać do $($(get-date).AddDays(8).ToShortDateString()).
-`n---`n
-"@
+            Write-Output "`n`n**$(get-date -Format "U-\K\KW-yyyy-MM-dd")-$no**"
+            Write-Output "$electionName nie odbędą się ze względu na niedostateczną liczbę kandydatur."
+            Write-Output ""
+            Write-Output "Odwołania można składać do $($(get-date).AddDays(8).ToShortDateString())."
+            Write-Output "`n---`n"
+
             continue
         }
-        else {
+        else <#($e.seats -lt $e.seatsOld )#> {
             $no++
-            Write-Output @"
-`n`n**$(get-date -Format "U-\K\KW-yyyy-MM-dd")-$no**
-Ze względu na niedostateczną liczbę zgłoszeń, na podstawie Art. 15 pkt. 12 Statutu Partii, Krajowa Komisja Wyborcza ogłasza, że $electionName odbędą się z liczbą mandatów obniżoną do $($e.Seats).
-
-Odwołania można składać do $($(get-date).AddDays(8).ToShortDateString()).
-`n---`n
-"@
+            Write-Output "`n`n**$(get-date -Format "U-\K\KW-yyyy-MM-dd")-$no**"
+            Write-Output "Ze względu na niedostateczną liczbę zgłoszeń, na podstawie Art. 15 pkt. 12 Statutu Partii, Krajowa Komisja Wyborcza ogłasza, że $electionName odbędą się z liczbą mandatów obniżoną do $($e.Seats)."
+            Write-Output ""
+            Write-Output "Odwołania można składać do $($(get-date).AddDays(8).ToShortDateString())."
+            Write-Output "`n---`n"
         }
-
     }
     if ($can.count -eq $e.seats) {
         #tyle osób co miejsc, wyniki wyborów bez głosowania
         $no++
-        write-output @"
-**$(get-date -Format "U-\K\KW-yyyy-MM-dd")-$no**
-Na podstawie Art. 15 pkt. 11 Statutu Partii, Krajowa Komisja Wyborcza ogłasza że $electionName odbywają się bez przeprowadzania głosowania ze względu na liczbę kandydatur równą liczbie miejsc do obsadzenia i spełniony parytet.
-Wybrane zostają następujące osoby:
+        write-output "**$(get-date -Format "U-\K\KW-yyyy-MM-dd")-$no**"
+        write-output "Na podstawie Art. 15 pkt. 11 Statutu Partii, Krajowa Komisja Wyborcza ogłasza że $electionName odbywają się bez przeprowadzania głosowania ze względu na liczbę kandydatur równą liczbie miejsc do obsadzenia i spełniony parytet."
+        write-output "Wybrane zostają następujące osoby:"
+        write-output ""
+        write-output "$($can | Sort-Object {Get-Random} | ForEach-Object {write-output "- $_`n"})"
+        write-output ""
+        write-output "Ze względu na brak głosowania, lista znajduje się w losowej kolejności."
+        write-output ""
+        write-output "Odwołania można składać do $($(get-date).AddDays(8).ToShortDateString())."
+        write-output "`n---`n"
 
-$($can | Sort-Object {Get-Random} | ForEach-Object {write-output "- $_`n"})
-
-Ze względu na brak głosowania, lista znajduje się w losowej kolejności.
-
-Odwołania można składać do $($(get-date).AddDays(8).ToShortDateString()).
-`n---`n
-"@
     }
     else {
         #przeprowadź wybory
@@ -167,6 +164,7 @@ Odwołania można składać do $($(get-date).AddDays(8).ToShortDateString()).
     }
 }
 $elections = $elTemp
+$elections
 #<#
 foreach ($election in ($elections.Election | select-object -unique)) {
     $e = $elections | where-object election -eq $election | select-object -first 1
@@ -177,13 +175,13 @@ foreach ($election in ($elections.Election | select-object -unique)) {
         "election_module"        = "stv"
         "name"                   = "$($e.Election)"
         "description"            = $e.Election
-        "departments"            = "M`nK"
+        "departments"            = "M`nK`nX"
         "voting_starts_at_0"     = $e.Start
         "voting_starts_at_1"     = "00:00"
         "voting_ends_at_0"       = $e.End
         "voting_ends_at_1"       = "23:59"
         "trustees"               = "Partyjna Komisja Wyborcza, razem.pkw@gmail.com"
-        "help_email"             = "pkw@partiarazem.pl"
+        "help_email"             = "kkw@partiarazem.pl"
         "help_phone"             = "[skontaktuj się z ZO]"
         "communication_language" = "pl"
         "cast_consent_text"      = ""
@@ -232,7 +230,7 @@ foreach ($election in ($elections.Election | select-object -unique)) {
             "Origin"  = $base
         }
 
-        $form = @{
+        $form = [ordered]@{
             "form-TOTAL_FORMS"            = 1
             "form-INITIAL_FORMS"          = 1
             "form-MIN_NUM_FORMS"          = 0
@@ -247,18 +245,30 @@ foreach ($election in ($elections.Election | select-object -unique)) {
 
         $poll.M = $poll.M -split ';'
         $poll.K = $poll.K -split ';'
+        $poll.X = $poll.X -split ';'
         $i = 0
-        foreach ($c in $poll.M) {
-            $form["form-0-answer_$i`_0"] = $c
-            $form["form-0-answer_$i`_1"] = "M"
-            $i++
-        }
-        foreach ($c in $poll.K) {
-            $form["form-0-answer_$i`_0"] = $c
-            $form["form-0-answer_$i`_1"] = "K"
-            $i++
-        }
+        if ($poll.M -gt 0) {
 
+            foreach ($c in $poll.M) {
+                $form["form-0-answer_$i`_0"] = $c
+                $form["form-0-answer_$i`_1"] = "M"
+                $i++
+            }
+        }
+        if ($poll.K -gt 0) {
+            foreach ($c in $poll.K) {
+                $form["form-0-answer_$i`_0"] = $c
+                $form["form-0-answer_$i`_1"] = "K"
+                $i++
+            }
+        }
+        if ($poll.X -gt 0) {
+            foreach ($c in $poll.X) {
+                $form["form-0-answer_$i`_0"] = $c
+                $form["form-0-answer_$i`_1"] = "X"
+                $i++
+            }
+        }
         #add candidates
         $r = Invoke-WebRequest -uri "$base/elections/$electionID/polls/$pollID/questions/manage" @commonParams -WebSession $session -method POST -Form $form -Headers @{
             "Referer" = "$base/elections/$electionID/polls/$pollID/questions/manage"
@@ -286,59 +296,12 @@ foreach ($election in ($elections.Election | select-object -unique)) {
             "Origin"  = $base
         } -ContentType "application/x-www-form-urlencoded; charset=utf-8"
         $output += [PSCustomObject]@{
-            "name"       = $e.Election
-            "pollName"   = $e.poll
-            "election"   = $electionID
-            "poll"       = $pollID
+            "name"     = $poll.Election
+            "pollName" = $poll.poll
+            "election" = $electionID
+            "poll"     = $pollID
         }
     }
 }
 $output | export-csv -Path "$root\out\$(get-date -format "yyyyMMddTHHmmss")-output.csv" -NoTypeInformation -Encoding utf8NoBOM -Delimiter ','
-#>
-
-########## end election form in panel ####################
-<#
-try { $credentials = import-clixml "$root\panel.partiarazem.pl.cred" }
-catch {
-    $credentials = get-credential -Message "Panel login"
-    if ($Host.UI.PromptForChoice("Security", "Do you want to save credentials?", @("No", "Yes"), 0)) {
-        $credentials | Export-Clixml "$root\panel.partiarazem.pl.cred"
-    }
-}
-
-$s = Invoke-WebRequest -uri "https://panel.partiarazem.pl" -method GET -SessionVariable "rse" @commonParams -headers @{
-    "Referer" = "https://panel.partiarazem.pl/members/sign_in"
-    "Origin"  = "https://panel.partiarazem.pl"
-}
-$s.Content -match "`n.*csrf-token""\ content=""(?'token'.*)"".*`n" | Out-Null
-$authToken = $matches.token
-$s = Invoke-WebRequest -uri "https://panel.partiarazem.pl/members/sign_in" -method POST -websession $rse @commonParams -headers @{
-    "Referer" = "https://panel.partiarazem.pl/members/sign_in"
-    "Origin"  = "https://panel.partiarazem.pl"
-} -body @{
-    "utf8"               = "✓"
-    "authenticity_token" = $authToken
-    "member[email]"      = $credentials.UserName
-    "member[password]"   = $credentials.GetNetworkCredential().Password
-    "commit"             = "Zaloguj się"
-}
-
-$s.Content -match "`n.*csrf-token""\ content=""(?'token'.*)"".*`n" | Out-Null
-$authToken = $matches.token
-
-foreach ($e in $(import-csv "$root/zeus-input.csv" -delimiter ',' -encoding "UTF8")) {
-    Write-Output "closing " + $e.Election
-    $s = Invoke-WebRequest -uri "https://panel.partiarazem.pl/elections/$($e.ID)" -method PUT -websession $rse @commonParams -headers @{
-        "Referer" = "https://panel.partiarazem.pl/elections"
-        "Origin"  = "https://panel.partiarazem.pl"
-    } -body @{
-        "utf8"                       = "✓"
-        "authenticity_token"         = $authToken
-        "election[active]"           = "0"
-        "election[answers_editable]" = "0"
-        "commit"                     = "Zapisz wybory"
-    }
-    $s.Content -match "`n.*csrf-token""\ content=""(?'token'.*)"".*`n" | Out-Null
-    $authToken = $matches.token
-}
 #>
