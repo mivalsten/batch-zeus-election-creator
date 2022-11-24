@@ -37,13 +37,13 @@ foreach ($e in $in) {
         "Referer" = "$base/elections/$($e.election)"
         "Origin"  = $base
     }
-    $r.content -match "(?ms)<tbody.*</tbody>" | Out-Null
+    $r.content -match "(?ms)<tr data-uuid=`"$poll.*?</tr>" | Out-Null
     $t = $matches[0]
     $t = $t -replace "`r" -replace "`n" -replace " " -replace "</td><td>", ";" -replace "<div.*?div>" -replace "<td>", "#!#!" -replace "<.*?>" -split "#!#!"
     $t | ForEach-Object {
         if ($_ -ne "") {
             $a = $_ -split ';'
-            write-output "$($e.name) - uprawnione $($a[3]), zagłosowało $($a[5]), frekwencja $([math]::Round($($a[5])/$($a[3])*100,1))%"
+            write-output "$(if (($in |? {$_.name -eq $e.name}).count -eq 1) {$e.name} else {"$($e.name): $($e.pollName)"}) - uprawnione $($a[3]), zagłosowało $($a[5]), frekwencja $([math]::Round($($a[5])/$($a[3])*100,1))%"
         }
     }
 }

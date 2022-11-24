@@ -50,7 +50,7 @@ foreach ($e in $in) {
         "csrfmiddlewaretoken" = $csrfRegex.matches(($r.Content -split "`n" | select-string "csrfmiddlewaretoken")[0]).captures.groups[1].value
         "template"            = "vote"
         "voter_id"            = ""
-        "email_subject"       = $e.name
+        "email_subject"       = if (($in |? {$_.name -eq $e.name}).count -eq 1) {$e.name} else {"$($e.name) - $($e.pollName)"}
         "email_body"          = "W przypadku problemów z logowaniem otwórz link do głosowania w trybie incognito. W tym celu kliknij w link prawym przyciskiem myszy i wybierz `"Otwórz w trybie incognito`" lub podobnie brzmiącą opcję. W razie problemów, skontaktuj się ze swoim Zarządem Okręgu."
         "send_to"             = "all"
         "sms_body"            = ""
