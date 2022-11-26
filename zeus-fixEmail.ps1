@@ -45,10 +45,10 @@ else {
 }
 
 foreach ($e in $in) {
-    ssh db3.razem "sudo su postgres -c `"~/update_email.sh $($e.poll) $newEmail $oldEmail`""
-    $x = ""
-    $x = (ssh db3.razem "sudo su postgres -c `"~/mail_uuid.sh $($e.poll) $newEmail`"")
-    if ($x -ne "" -and $newEmail -ne "") {
+    $updateResult = ""
+    $updateResult = ssh db3.razem "sudo su postgres -c `"~/update_email.sh $($e.poll) $newEmail $oldEmail`""
+    if (if $updateResult -match "UPDATE 1") {
+        $x = (ssh db3.razem "sudo su postgres -c `"~/mail_uuid.sh $($e.poll) $newEmail`"")
         $r = Invoke-WebRequest -uri "$base/elections/$($e.election)/polls/$($e.poll)/voters/email/$x" -WebSession $session -method POST -Body @{
             "csrfmiddlewaretoken" = $csrfRegex.matches(($r.Content -split "`n" | select-string "csrfmiddlewaretoken")[0]).captures.groups[1].value
             "template"            = "vote"
