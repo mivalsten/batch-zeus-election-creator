@@ -37,7 +37,7 @@ foreach ($e in $in) {
         "Referer" = "$base/elections/$($e.election)"
         "Origin"  = $base
     }
-    $r.content -match "(?ms)<tr data-uuid=`"$poll.*?</tr>" | Out-Null
+    $r.content -match "(?ms)<tr data-uuid=`"$($e.poll).*?</tr>" | Out-Null
     $t = $matches[0]
     $t = $t -replace "`r" -replace "`n" -replace " " -replace "</td><td>", ";" -replace "<div.*?div>" -replace "<td>", "#!#!" -replace "<.*?>" -split "#!#!"
     $t | ForEach-Object {
