@@ -13,7 +13,7 @@ $commonParams = @{
     #"ProxyUseDefaultCredential" = $true
 }
 
-$base = "https://zeus.int.partiarazem.pl"
+$base = "https://zeus.partiarazem.pl"
 $root = $PSScriptRoot
 $csrfRegex = [regex]::New(".*value=`"(.*)`"")
 
@@ -46,7 +46,7 @@ else {
 
 foreach ($e in $in) {
     $updateResult = ""
-    $updateResult = ssh db3.razem "sudo su postgres -c `"~/update_email.sh $($e.poll) $newEmail $oldEmail`""
+    $updateResult = ssh db4.razem "sudo su postgres -c `"~/update_email.sh $($e.poll) $newEmail $oldEmail`""
     if ($updateResult -match "UPDATE 1") {
         $x = (ssh db3.razem "sudo su postgres -c `"~/mail_uuid.sh $($e.poll) $newEmail`"")
         $emailSubject = if (($in | ? { $_.name -eq $e.name }).count -eq 1) { $e.name } else { "$($e.name) - $($e.pollName)" }

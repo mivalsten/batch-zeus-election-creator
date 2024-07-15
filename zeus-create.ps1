@@ -41,7 +41,7 @@ function Get-Voters {
     $s.Content -match "`n.*csrf-token""\ content=""(?'token'.*)"".*`n" | Out-Null
     $authToken = $matches.token
 
-    $s = Invoke-WebRequest -uri "$base/elections/$ID/voters.csv" @commonParams -WebSession $rse
+    $s = Invoke-WebRequest -uri "$base/elections/$ID/voters_with_payments.csv" @commonParams -WebSession $rse
 
     $utf8 = [System.Text.Encoding]::GetEncoding(65001)
     $iso88591 = [System.Text.Encoding]::GetEncoding(28591) #ISO 8859-1 ,Latin-1
@@ -51,7 +51,7 @@ function Get-Voters {
     return "$root\temp\voters-$ID.csv"
 }
 
-$base = "https://zeus.int.partiarazem.pl"
+$base = "https://zeus.partiarazem.pl"
 #$base = "https://zeus.gko.mj12.pl"
 $root = $PSScriptRoot
 $csrfRegex = [regex]::New(".*value=`"(.*)`"")

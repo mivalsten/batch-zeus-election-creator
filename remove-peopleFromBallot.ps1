@@ -66,9 +66,9 @@ foreach ($line in $fileContent) {
 $m = @()
 $k = @()
 $x = @()
-
+$constituencies
 foreach ($votee in $constituencies) {
-    switch ($votee[-2, -1]) {
+    switch ($votee[-2, -1] -join "") {
         ":M" { $m += $votee; break }
         ":K" { $k += $votee; break }
         ":X" { $x += $votee; break }
@@ -83,7 +83,7 @@ Push-Location
 Set-Location $zeusPath
 New-Item -Path "$filepath\out\" -ItemType "directory" -ErrorAction SilentlyContinue | Out-Null
 
-C:\Users\mival\AppData\Local\Programs\Python\Python310\python.exe -m stv.stv -b $ballotsPath -c $constituenciesPath --separate-quota $quota -s $seats | out-file "$outpath.csv"
+C:\Users\grzeg\AppData\Local\Programs\Python\Python310\python.exe -m stv.stv -b $ballotsPath -c $constituenciesPath --separate-quota $quota -s $seats | out-file "$outpath.csv"
 Get-Content "$outpath.csv"
 
 & "$psscriptroot/format-zeusOutput.ps1" -file "$outpath.csv" -title "$title" | Tee-Object "$outpath.md" | pandoc -s -o "$outpath.pdf"

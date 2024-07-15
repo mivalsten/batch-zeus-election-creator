@@ -7,7 +7,7 @@ $commonParams = @{
     #"ProxyUseDefaultCredential" = $true
 }
 
-$base = "https://zeus.int.partiarazem.pl"
+$base = "https://zeus.partiarazem.pl"
 $root = $PSScriptRoot
 $csrfRegex = [regex]::New(".*value=`"(.*)`"")
 
