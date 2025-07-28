@@ -43,7 +43,7 @@ foreach ($e in $in) {
     $t | ForEach-Object {
         if ($_ -ne "") {
             $a = $_ -split ';'
-            write-output "$(if (($in |? {$_.name -eq $e.name}).count -eq 1) {$e.name} else {"$($e.name): $($e.pollName)"}) - uprawnione $($a[3]), powiadomione $($a[4]), zagłosowało $($a[5]), frekwencja $([math]::Round($($a[5])/$($a[3])*100,1))%"
+            write-output "$(if (($in |? {$_.name -eq $e.name}).count -eq 1) {$e.name} else {"$($e.name): $($e.pollName)"}) - uprawnione $($a[3]), zagłosowało $($a[5]), frekwencja $([math]::Round($($a[5])/$($a[3])*100,1))%"
         }
     }
 }

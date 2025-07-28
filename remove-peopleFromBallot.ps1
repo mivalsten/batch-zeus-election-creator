@@ -43,13 +43,13 @@ write-output "outpath: $outpath"
 #>
 $fileContent = Get-Content $file -Encoding UTF8
 #assume that if the file is not raw export from Zeus it's ballot file
-if ($fileContent[0] -match "Nazwa wybor.w") { $skip = $true }
+if ($fileContent[0] -match "Nazwa wybor.w" -or $fileContent[0] -match "Election name") { $skip = $true }
 else { $skip = $false }
 $constituencies = @()
 foreach ($line in $fileContent) {
-    if ($line -match "Nazwa wybor.w") { $title = $($line -split ',')[1] }
-    if ($line -match "Nazwa g.osowania") { $title += " - $($($line -split ',')[1])" }
-    if ($line -match "Karty do g.osowania") {
+    if ($line -match "Nazwa wybor.w" -or $line -match "Election name") { $title = $($line -split ',')[1] }
+    if ($line -match "Nazwa g.osowania" -or $line -match "Poll name") { $title += " - $($($line -split ',')[1])" }
+    if ($line -match "Karty do g.osowania" -or $line -match "Ballots") {
         $skip = $false
         Write-Output "stopped skipping"
         continue
@@ -83,7 +83,7 @@ Push-Location
 Set-Location $zeusPath
 New-Item -Path "$filepath\out\" -ItemType "directory" -ErrorAction SilentlyContinue | Out-Null
 
-C:\Users\grzeg\AppData\Local\Programs\Python\Python310\python.exe -m stv.stv -b $ballotsPath -c $constituenciesPath --separate-quota $quota -s $seats | out-file "$outpath.csv"
+python -m stv.stv -b $ballotsPath -c $constituenciesPath --separate-quota $quota -s $seats | out-file "$outpath.csv"
 Get-Content "$outpath.csv"
 
 & "$psscriptroot/format-zeusOutput.ps1" -file "$outpath.csv" -title "$title" | Tee-Object "$outpath.md" | pandoc -s -o "$outpath.pdf"

@@ -17,7 +17,7 @@ write-output "## Wyniki`n`n|Kandydatka|Runda|Głosów|`n|:---|:---:|:---|"
 
 foreach ($winner in ($results -replace "`r`n", "`n" -split "`n")) {
     if ([string]::IsNullOrWhiteSpace($winner)) { continue }
-    $winnerMatch = ([regex]"\('(?<winner>.*)', (?<round>\d*), (?<votes>[\d.]+)\)").Matches($winner)[0].groups
+    $winnerMatch = ([regex]"\('(?<winner>.*)', (?<round>\d*), (?<votes>[\d.e-]+)\)").Matches($winner)[0].groups
     write-output "|$($winnerMatch['winner'])|$($winnerMatch['round'])|$($winnerMatch['votes'])|"
 }
 
