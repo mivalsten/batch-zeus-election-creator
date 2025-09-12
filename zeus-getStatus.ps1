@@ -1,3 +1,10 @@
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [switch]
+    $markdown
+)
+
 $commonParams = @{
     #"Proxy" = ""
     #"ProxyUseDefaultCredential" = $true
@@ -28,9 +35,15 @@ $r = Invoke-WebRequest -uri "$base/auth/auth/login" -WebSession $session -method
     "Origin"  = $base
 }
 if ($isLinux) {
-    $in = $(import-csv (Get-ChildItem "$root\out" -Filter "*-output.csv" | Select-Object name, fullname | Sort-Object -Property name -Descending | Out-GridView -PassThru).fullname -delimiter ',' -encoding "UTF8")
-} else {
+    $in = $(import-csv (Get-ChildItem "$root\out" -Filter "*-output.csv" | Select-Object name, fullname | Sort-Object -Property name -Descending | Out-ConsoleGridView -PassThru).fullname -delimiter ',' -encoding "UTF8")
+}
+else {
     $in = $(import-csv (Get-ChildItem "$root/out" -Filter "*-output.csv" | Select-Object name, fullname | Sort-Object -Property name -Descending | Out-ConsoleGridView).fullname -delimiter ',' -encoding "UTF8")
+}
+
+if ($markdown) {
+    write-output "| Wybory | Uprawnione | Zagłosowało | Frekwencja |"
+    write-output "|--------|------------|-------------|------------|"
 }
 foreach ($e in $in) {
     $r = Invoke-WebRequest -uri "$base/elections/$($e.election)/polls/" -WebSession $session -method GET -Headers @{
@@ -43,7 +56,12 @@ foreach ($e in $in) {
     $t | ForEach-Object {
         if ($_ -ne "") {
             $a = $_ -split ';'
-            write-output "$(if (($in |? {$_.name -eq $e.name}).count -eq 1) {$e.name} else {"$($e.name): $($e.pollName)"}) - uprawnione $($a[3]), zagłosowało $($a[5]), frekwencja $([math]::Round($($a[5])/$($a[3])*100,1))%"
+            if ($markdown) {
+                write-output "| $(if (($in |? {$_.name -eq $e.name}).count -eq 1) {$e.name} else {"$($e.name): $($e.pollName)"}) | $($a[3]) | $($a[5]) | $([math]::Round($($a[5])/$($a[3])*100,1))% |"
+            }
+            else {
+                write-output "$(if (($in |? {$_.name -eq $e.name}).count -eq 1) {$e.name} else {"$($e.name): $($e.pollName)"}) - uprawnione $($a[3]), zagłosowało $($a[5]), frekwencja $([math]::Round($($a[5])/$($a[3])*100,1))%"
+            }
         }
     }
 }
