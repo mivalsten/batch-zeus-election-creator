@@ -1,5 +1,12 @@
 #Requires -Version 6
 
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [switch]
+    $useTrustee
+)
+
 $commonParams = @{
     #"Proxy" = ""
     #"ProxyUseDefaultCredential" = $true
@@ -180,7 +187,7 @@ foreach ($election in ($elections.Election | select-object -unique)) {
         "voting_starts_at_1"     = "00:00"
         "voting_ends_at_0"       = $e.End
         "voting_ends_at_1"       = "23:59"
-        "trustees"               = "Partyjna Komisja Wyborcza, razem.pkw@gmail.com"
+        "trustees"               = $( if ($useTrustee) {"Partyjna Komisja Wyborcza, razem.pkw@gmail.com"} else {""} )
         "help_email"             = "kkw@partiarazem.pl"
         "help_phone"             = "[skontaktuj się z ZO]"
         "communication_language" = "pl"
